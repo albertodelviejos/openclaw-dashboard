@@ -13,13 +13,13 @@ export async function GET() {
       headers['x-openclaw-token'] = GATEWAY_TOKEN;
     }
 
-    // Use the subagents tool format
-    const response = await fetch(`${GATEWAY_URL}/tool/subagents`, {
+    // Use sessions_list to get ALL agent sessions (not just subagents)
+    const response = await fetch(`${GATEWAY_URL}/tool/sessions_list`, {
       method: 'POST',
       headers,
       body: JSON.stringify({ 
-        action: 'list',
-        recentMinutes: 30
+        limit: 50,
+        messageLimit: 0,
       }),
     });
 
@@ -31,15 +31,24 @@ export async function GET() {
 
     const data = await response.json();
     
-    // Transform the response to include both active and recent
-    const allAgents = [
-      ...(data.active || []),
-      ...(data.recent || [])
-    ];
+    // Transform sessions into agents format
+    const agents = (data.sessions || []).map((session: any) => ({
+      sessionKey: session.key,
+      label: session.key.split(':')[1] || session.key, // Extract agent name from key
+      agentId: session.key.split(':')[1],
+      status: session.status === 'running' ? 'active' : 'idle',
+      model: session.model,
+      runtime: 'agent-session',
+      created: session.startedAt,
+      task: session.displayName,
+      tokens: session.totalTokens,
+      cost: session.estimatedCostUsd,
+      channel: session.channel,
+    }));
     
     return NextResponse.json({
-      agents: allAgents,
-      total: data.total || 0,
+      agents,
+      total: agents.length,
     });
   } catch (error) {
     console.error('Error fetching agents:', error);
