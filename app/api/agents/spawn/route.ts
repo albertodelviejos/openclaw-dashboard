@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 
-const GATEWAY_URL = process.env.OPENCLAW_GATEWAY_URL || 'http://localhost:3777';
+const GATEWAY_URL = process.env.OPENCLAW_GATEWAY_URL || 'http://localhost:18789';
 const GATEWAY_TOKEN = process.env.OPENCLAW_GATEWAY_TOKEN;
 
 export async function POST(request: Request) {
@@ -20,7 +20,7 @@ export async function POST(request: Request) {
     };
     
     if (GATEWAY_TOKEN) {
-      headers['Authorization'] = `Bearer ${GATEWAY_TOKEN}`;
+      headers['x-openclaw-token'] = GATEWAY_TOKEN;
     }
 
     const payload: any = {
@@ -33,13 +33,15 @@ export async function POST(request: Request) {
     if (label) payload.label = label;
     if (model) payload.model = model;
 
-    const response = await fetch(`${GATEWAY_URL}/api/v1/sessions/spawn`, {
+    const response = await fetch(`${GATEWAY_URL}/tool/sessions_spawn`, {
       method: 'POST',
       headers,
       body: JSON.stringify(payload),
     });
 
     if (!response.ok) {
+      const errorText = await response.text();
+      console.error('Gateway error:', response.status, errorText);
       const errorData = await response.json().catch(() => ({}));
       throw new Error(errorData.error || `Gateway returned ${response.status}`);
     }

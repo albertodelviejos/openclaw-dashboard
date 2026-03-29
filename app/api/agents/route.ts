@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 
-const GATEWAY_URL = process.env.OPENCLAW_GATEWAY_URL || 'http://localhost:3777';
+const GATEWAY_URL = process.env.OPENCLAW_GATEWAY_URL || 'http://localhost:18789';
 const GATEWAY_TOKEN = process.env.OPENCLAW_GATEWAY_TOKEN;
 
 export async function GET() {
@@ -10,23 +10,36 @@ export async function GET() {
     };
     
     if (GATEWAY_TOKEN) {
-      headers['Authorization'] = `Bearer ${GATEWAY_TOKEN}`;
+      headers['x-openclaw-token'] = GATEWAY_TOKEN;
     }
 
-    const response = await fetch(`${GATEWAY_URL}/api/v1/subagents?action=list`, {
+    // Use the subagents tool format
+    const response = await fetch(`${GATEWAY_URL}/tool/subagents`, {
       method: 'POST',
       headers,
-      body: JSON.stringify({ action: 'list' }),
+      body: JSON.stringify({ 
+        action: 'list',
+        recentMinutes: 30
+      }),
     });
 
     if (!response.ok) {
+      const errorText = await response.text();
+      console.error('Gateway error:', response.status, errorText);
       throw new Error(`Gateway returned ${response.status}`);
     }
 
     const data = await response.json();
     
+    // Transform the response to include both active and recent
+    const allAgents = [
+      ...(data.active || []),
+      ...(data.recent || [])
+    ];
+    
     return NextResponse.json({
-      agents: data.agents || [],
+      agents: allAgents,
+      total: data.total || 0,
     });
   } catch (error) {
     console.error('Error fetching agents:', error);
