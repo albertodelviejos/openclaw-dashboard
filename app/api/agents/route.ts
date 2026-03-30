@@ -1,21 +1,13 @@
 import { NextResponse } from 'next/server';
+import { OpenClawGatewayClient } from '@/lib/gateway-client';
 
-const GATEWAY_URL = process.env.OPENCLAW_GATEWAY_URL || 'http://localhost:3778';
+const GATEWAY_URL = process.env.OPENCLAW_GATEWAY_URL || 'http://localhost:18789';
+const GATEWAY_TOKEN = process.env.OPENCLAW_GATEWAY_TOKEN || '';
 
 export async function GET() {
   try {
-    console.log('Fetching agents from:', GATEWAY_URL);
-    
-    const response = await fetch(`${GATEWAY_URL}/api/agents`);
-    
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('Bridge error:', response.status, errorText);
-      throw new Error(`Bridge returned ${response.status}`);
-    }
-
-    const data = await response.json();
-    console.log('Got agents:', data.total);
+    const client = new OpenClawGatewayClient(GATEWAY_URL, GATEWAY_TOKEN);
+    const data = await client.listSubAgents();
     
     return NextResponse.json(data);
   } catch (error: any) {
