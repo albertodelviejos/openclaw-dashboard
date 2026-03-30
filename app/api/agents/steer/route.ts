@@ -16,12 +16,16 @@ export async function POST(request: Request) {
       );
     }
 
+    console.log('[API] Steering agent:', target);
+
     const client = new OpenClawGatewayClient(GATEWAY_URL, GATEWAY_TOKEN);
     const result = await client.steerSubAgent(target, message);
     
+    console.log('[API] Steer result:', result);
+    
     return NextResponse.json(result);
   } catch (error: any) {
-    console.error('Error steering agent:', error);
+    console.error('[API] Error steering agent:', error);
     return NextResponse.json(
       { error: error.message || 'Failed to steer agent' },
       { status: 500 }

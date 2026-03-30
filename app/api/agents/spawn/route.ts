@@ -16,12 +16,16 @@ export async function POST(request: Request) {
       );
     }
 
+    console.log('[API] Spawning agent with task:', task);
+
     const client = new OpenClawGatewayClient(GATEWAY_URL, GATEWAY_TOKEN);
     const result = await client.spawnSubAgent(task, { model, thinking });
     
+    console.log('[API] Spawn result:', result);
+    
     return NextResponse.json(result);
   } catch (error: any) {
-    console.error('Error spawning agent:', error);
+    console.error('[API] Error spawning agent:', error);
     return NextResponse.json(
       { error: error.message || 'Failed to spawn agent' },
       { status: 500 }

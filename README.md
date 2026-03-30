@@ -1,71 +1,58 @@
-# 🎛️ OpenClaw Dashboard
+# OpenClaw Dashboard
 
-Real-time dashboard for monitoring and controlling OpenClaw subagents.
+Dashboard moderno para gestionar agentes de OpenClaw.
 
-## Features
+## 🚀 Estado Actual
 
-- 📊 **Real-time monitoring** - Auto-refresh every 3 seconds
-- 🤖 **Agent management** - Spawn, kill, and steer agents
-- 📝 **View logs** - Full conversation history for each agent
-- 📈 **Stats overview** - Active, idle, and error counts
-- 🎨 **Beautiful UI** - Dark theme with glassmorphism
+✅ **Completado:**
+- UI moderna con diseño glassmorphism
+- Interfaz responsive
+- API Routes configurados
+- Acceso en red local
 
-## Setup
+⏳ **En Desarrollo:**
+- Implementación completa del protocolo WebSocket de OpenClaw Gateway
+- Gestión de agentes en tiempo real (spawn, kill, steer)
 
-### 1. Install Dependencies
+## 📡 Acceso
+
+### Dashboard Custom (Next.js)
+```
+http://192.168.1.154:3000
+```
+
+### Dashboard Nativo de OpenClaw
+```
+http://192.168.1.154:18789
+```
+
+## 🛠️ Desarrollo Local
 
 ```bash
+# Instalar dependencias
 npm install
+
+# Desarrollo
+npm run dev -- -H 0.0.0.0
+
+# Build
+npm run build
+
+# Producción
+npm start
 ```
 
-### 2. Configure Environment
+## 🔧 Variables de Entorno
 
-Copy `.env.example` to `.env.local`:
-
-```bash
-cp .env.example .env.local
-```
-
-Edit `.env.local` with your OpenClaw Gateway details:
+Crear `.env.local`:
 
 ```env
-OPENCLAW_GATEWAY_URL=http://localhost:3777
-OPENCLAW_GATEWAY_TOKEN=your-token-here
+OPENCLAW_GATEWAY_URL=http://192.168.1.154:18789
+OPENCLAW_GATEWAY_TOKEN=tu_token_aqui
 ```
 
-### 3. Run Development Server
+## 📝 Notas
 
-```bash
-npm run dev
-```
+El dashboard está expuesto en la red local para acceso desde cualquier dispositivo en tu WiFi.
 
-Open [http://localhost:3000](http://localhost:3000)
-
-## Deploy to Vercel
-
-```bash
-vercel
-```
-
-Add environment variables in Vercel dashboard:
-- `OPENCLAW_GATEWAY_URL`
-- `OPENCLAW_GATEWAY_TOKEN`
-
-## API Endpoints
-
-- `GET /api/agents` - List all agents
-- `POST /api/agents/spawn` - Spawn new agent
-- `POST /api/agents/kill` - Kill an agent
-- `POST /api/agents/steer` - Send message to agent
-- `GET /api/agents/logs` - Get agent conversation history
-
-## Tech Stack
-
-- **Next.js 15** - React framework
-- **Tailwind CSS** - Styling
-- **TypeScript** - Type safety
-- **OpenClaw Gateway API** - Backend integration
-
-## License
-
-MIT
+Para funcionalidad completa ahora, usa el dashboard nativo en el puerto 18789.

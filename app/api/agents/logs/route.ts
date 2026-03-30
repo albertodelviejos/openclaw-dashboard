@@ -17,12 +17,16 @@ export async function GET(request: Request) {
       );
     }
 
+    console.log('[API] Fetching logs for session:', sessionKey);
+
     const client = new OpenClawGatewayClient(GATEWAY_URL, GATEWAY_TOKEN);
     const result = await client.getSessionHistory(sessionKey, limit);
     
+    console.log('[API] Got', result?.messages?.length || 0, 'messages');
+    
     return NextResponse.json(result);
   } catch (error: any) {
-    console.error('Error fetching logs:', error);
+    console.error('[API] Error fetching logs:', error);
     return NextResponse.json(
       { error: error.message || 'Failed to fetch logs', messages: [] },
       { status: 500 }

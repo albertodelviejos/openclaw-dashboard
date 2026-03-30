@@ -16,12 +16,16 @@ export async function POST(request: Request) {
       );
     }
 
+    console.log('[API] Killing agent:', target);
+
     const client = new OpenClawGatewayClient(GATEWAY_URL, GATEWAY_TOKEN);
     const result = await client.killSubAgent(target);
     
+    console.log('[API] Kill result:', result);
+    
     return NextResponse.json(result);
   } catch (error: any) {
-    console.error('Error killing agent:', error);
+    console.error('[API] Error killing agent:', error);
     return NextResponse.json(
       { error: error.message || 'Failed to kill agent' },
       { status: 500 }
