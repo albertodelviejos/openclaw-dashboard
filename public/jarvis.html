@@ -1,0 +1,619 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JARVIS - Agent Control System</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700;900&display=swap');
+        
+        body {
+            font-family: 'Orbitron', monospace;
+            background: #000;
+            color: #0ff;
+            overflow: hidden;
+            height: 100vh;
+        }
+        
+        /* Animated grid background */
+        .grid-background {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: 
+                linear-gradient(rgba(0, 255, 255, 0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(0, 255, 255, 0.03) 1px, transparent 1px);
+            background-size: 50px 50px;
+            animation: gridScroll 20s linear infinite;
+            z-index: 0;
+        }
+        
+        @keyframes gridScroll {
+            0% { background-position: 0 0; }
+            100% { background-position: 50px 50px; }
+        }
+        
+        /* Scanlines effect */
+        .scanlines {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: repeating-linear-gradient(
+                0deg,
+                rgba(0, 255, 255, 0.03),
+                rgba(0, 255, 255, 0.03) 1px,
+                transparent 1px,
+                transparent 2px
+            );
+            pointer-events: none;
+            z-index: 999;
+        }
+        
+        .container {
+            position: relative;
+            z-index: 1;
+            height: 100vh;
+            display: grid;
+            grid-template-rows: auto 1fr;
+            padding: 20px;
+            gap: 20px;
+        }
+        
+        /* Header */
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px 30px;
+            background: rgba(0, 20, 40, 0.8);
+            border: 2px solid #0ff;
+            border-radius: 10px;
+            box-shadow: 0 0 20px rgba(0, 255, 255, 0.5), inset 0 0 20px rgba(0, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+        }
+        
+        .logo {
+            font-size: 2.5rem;
+            font-weight: 900;
+            letter-spacing: 3px;
+            text-shadow: 0 0 10px #0ff, 0 0 20px #0ff;
+            animation: pulse 2s ease-in-out infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; text-shadow: 0 0 10px #0ff, 0 0 20px #0ff; }
+            50% { opacity: 0.8; text-shadow: 0 0 20px #0ff, 0 0 40px #0ff; }
+        }
+        
+        .system-status {
+            display: flex;
+            gap: 30px;
+            font-size: 0.9rem;
+        }
+        
+        .status-item {
+            text-align: center;
+        }
+        
+        .status-label {
+            color: #0aa;
+            font-size: 0.7rem;
+            margin-bottom: 5px;
+        }
+        
+        .status-value {
+            font-size: 1.5rem;
+            font-weight: 700;
+            text-shadow: 0 0 10px #0ff;
+        }
+        
+        /* Main Grid */
+        .main-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            grid-template-rows: 1fr 1fr;
+            gap: 20px;
+            height: 100%;
+        }
+        
+        .panel {
+            background: rgba(0, 20, 40, 0.6);
+            border: 2px solid #0ff;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 0 20px rgba(0, 255, 255, 0.3), inset 0 0 20px rgba(0, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .panel-title {
+            font-size: 1.2rem;
+            font-weight: 700;
+            margin-bottom: 15px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            color: #0ff;
+            text-shadow: 0 0 10px #0ff;
+            padding-bottom: 10px;
+            border-bottom: 1px solid rgba(0, 255, 255, 0.3);
+        }
+        
+        /* Agents Grid */
+        .agents-container {
+            grid-column: 1 / 2;
+            grid-row: 1 / 3;
+        }
+        
+        .agent-list {
+            overflow-y: auto;
+            flex: 1;
+        }
+        
+        .agent-item {
+            background: rgba(0, 50, 100, 0.3);
+            border-left: 3px solid;
+            padding: 15px;
+            margin-bottom: 10px;
+            border-radius: 5px;
+            transition: all 0.3s;
+        }
+        
+        .agent-item:hover {
+            background: rgba(0, 50, 100, 0.6);
+            transform: translateX(5px);
+        }
+        
+        .agent-header {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 10px;
+        }
+        
+        .agent-emoji {
+            font-size: 2rem;
+            filter: drop-shadow(0 0 5px currentColor);
+        }
+        
+        .agent-name {
+            font-size: 1.3rem;
+            font-weight: 700;
+        }
+        
+        .agent-status {
+            margin-left: auto;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            animation: blink 1s infinite;
+        }
+        
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.3; }
+        }
+        
+        .agent-stats {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            font-size: 0.8rem;
+        }
+        
+        .agent-stat {
+            display: flex;
+            justify-content: space-between;
+        }
+        
+        .agent-stat-label { color: #0aa; }
+        .agent-stat-value { color: #0ff; font-weight: 700; }
+        
+        /* Charts */
+        .chart-container {
+            position: relative;
+            flex: 1;
+        }
+        
+        /* Logs Stream */
+        .logs-container {
+            grid-column: 2 / 4;
+            grid-row: 2 / 3;
+        }
+        
+        .logs-stream {
+            flex: 1;
+            overflow-y: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 0.85rem;
+        }
+        
+        .log-entry {
+            padding: 8px 12px;
+            margin-bottom: 5px;
+            border-left: 3px solid;
+            background: rgba(0, 50, 100, 0.2);
+            border-radius: 3px;
+            animation: slideIn 0.3s ease-out;
+        }
+        
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateX(-20px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+        
+        .log-time {
+            color: #0aa;
+            font-size: 0.75rem;
+            margin-right: 10px;
+        }
+        
+        .log-agent {
+            color: #0ff;
+            font-weight: 700;
+            margin-right: 10px;
+        }
+        
+        .log-content {
+            color: #0ef;
+        }
+        
+        /* Scrollbar styling */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        
+        ::-webkit-scrollbar-track {
+            background: rgba(0, 20, 40, 0.5);
+        }
+        
+        ::-webkit-scrollbar-thumb {
+            background: #0ff;
+            border-radius: 4px;
+            box-shadow: 0 0 10px #0ff;
+        }
+        
+        ::-webkit-scrollbar-thumb:hover {
+            background: #0aa;
+        }
+        
+        /* Glowing borders */
+        @keyframes glowBorder {
+            0%, 100% { box-shadow: 0 0 20px rgba(0, 255, 255, 0.3), inset 0 0 20px rgba(0, 255, 255, 0.05); }
+            50% { box-shadow: 0 0 30px rgba(0, 255, 255, 0.5), inset 0 0 30px rgba(0, 255, 255, 0.1); }
+        }
+        
+        .panel {
+            animation: glowBorder 3s ease-in-out infinite;
+        }
+    </style>
+</head>
+<body>
+    <div class="grid-background"></div>
+    <div class="scanlines"></div>
+    
+    <div class="container">
+        <div class="header">
+            <div class="logo">⚡ JARVIS</div>
+            <div class="system-status">
+                <div class="status-item">
+                    <div class="status-label">AGENTS</div>
+                    <div class="status-value" id="total-agents">-</div>
+                </div>
+                <div class="status-item">
+                    <div class="status-label">ACTIVE</div>
+                    <div class="status-value" id="active-agents">-</div>
+                </div>
+                <div class="status-item">
+                    <div class="status-label">TOKENS</div>
+                    <div class="status-value" id="total-tokens">-</div>
+                </div>
+                <div class="status-item">
+                    <div class="status-label">COST</div>
+                    <div class="status-value" style="color: #ff0;">$<span id="total-cost">0.00</span></div>
+                </div>
+                <div class="status-item">
+                    <div class="status-label">SYSTEM</div>
+                    <div class="status-value" id="system-status">⏳</div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="main-grid">
+            <!-- Agents Panel -->
+            <div class="panel agents-container">
+                <div class="panel-title">◈ ACTIVE AGENTS</div>
+                <div class="agent-list" id="agents-list">
+                    <div style="text-align: center; color: #0aa; padding: 40px;">
+                        Initializing...
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Token Usage Chart -->
+            <div class="panel">
+                <div class="panel-title">◈ TOKEN CONSUMPTION</div>
+                <div class="chart-container">
+                    <canvas id="tokens-chart"></canvas>
+                </div>
+            </div>
+            
+            <!-- Cost Chart -->
+            <div class="panel">
+                <div class="panel-title">◈ COST ANALYSIS</div>
+                <div class="chart-container">
+                    <canvas id="cost-chart"></canvas>
+                </div>
+            </div>
+            
+            <!-- Logs Stream -->
+            <div class="panel logs-container">
+                <div class="panel-title">◈ ACTIVITY STREAM</div>
+                <div class="logs-stream" id="logs-stream">
+                    <div class="log-entry" style="border-color: #0ff;">
+                        <span class="log-time">[SYSTEM]</span>
+                        <span class="log-content">Dashboard initialized. Monitoring agents...</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let agents = [];
+        let tokensChart, costChart;
+        let tokensHistory = [];
+        let costHistory = [];
+        let maxHistoryPoints = 20;
+        let lastTotalTokens = 0;
+        let lastTotalCost = 0;
+
+        // Initialize charts
+        function initCharts() {
+            const chartConfig = {
+                type: 'line',
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            grid: { color: 'rgba(0, 255, 255, 0.1)' },
+                            ticks: { color: '#0ff', font: { family: 'Orbitron' } }
+                        },
+                        x: {
+                            grid: { color: 'rgba(0, 255, 255, 0.1)' },
+                            ticks: { color: '#0aa', font: { family: 'Orbitron' } }
+                        }
+                    }
+                }
+            };
+
+            tokensChart = new Chart(document.getElementById('tokens-chart'), {
+                ...chartConfig,
+                data: {
+                    labels: [],
+                    datasets: [{
+                        label: 'Tokens',
+                        data: [],
+                        borderColor: '#0ff',
+                        backgroundColor: 'rgba(0, 255, 255, 0.1)',
+                        borderWidth: 2,
+                        tension: 0.4,
+                        fill: true
+                    }]
+                }
+            });
+
+            costChart = new Chart(document.getElementById('cost-chart'), {
+                ...chartConfig,
+                data: {
+                    labels: [],
+                    datasets: [{
+                        label: 'Cost ($)',
+                        data: [],
+                        borderColor: '#ff0',
+                        backgroundColor: 'rgba(255, 255, 0, 0.1)',
+                        borderWidth: 2,
+                        tension: 0.4,
+                        fill: true
+                    }]
+                }
+            });
+        }
+
+        // Update charts
+        function updateCharts(totalTokens, totalCost) {
+            const time = new Date().toLocaleTimeString().slice(-8);
+            
+            // Add new data
+            tokensHistory.push(totalTokens);
+            costHistory.push(totalCost);
+            
+            // Remove old data to keep fixed size
+            while (tokensHistory.length > maxHistoryPoints) {
+                tokensHistory.shift();
+                costHistory.shift();
+            }
+            
+            // Create labels array with fixed size
+            const labels = tokensHistory.map((_, i) => {
+                if (i === tokensHistory.length - 1) return time;
+                if (i % 5 === 0) return '·';
+                return '';
+            });
+            
+            // Update token chart
+            tokensChart.data.labels = labels;
+            tokensChart.data.datasets[0].data = [...tokensHistory];
+            tokensChart.update('none');
+            
+            // Update cost chart
+            costChart.data.labels = labels;
+            costChart.data.datasets[0].data = [...costHistory];
+            costChart.update('none');
+        }
+
+        // Fetch agents
+        async function fetchAgents() {
+            try {
+                const response = await fetch('/api/agents');
+                const data = await response.json();
+                agents = data.agents || [];
+                
+                const activeCount = agents.filter(a => a.status === 'active').length;
+                const totalTokens = agents.reduce((sum, a) => sum + (a.tokens || 0), 0);
+                const totalCost = agents.reduce((sum, a) => sum + (a.cost || 0), 0);
+                
+                // Update header stats
+                document.getElementById('total-agents').textContent = agents.length;
+                document.getElementById('active-agents').textContent = activeCount;
+                document.getElementById('total-tokens').textContent = formatNumber(totalTokens);
+                document.getElementById('total-cost').textContent = totalCost.toFixed(2);
+                document.getElementById('system-status').textContent = '✓';
+                
+                // Update charts only if values changed
+                if (totalTokens !== lastTotalTokens || totalCost !== lastTotalCost) {
+                    updateCharts(totalTokens, totalCost);
+                    lastTotalTokens = totalTokens;
+                    lastTotalCost = totalCost;
+                }
+                
+                // Render agents
+                renderAgents();
+                
+            } catch (error) {
+                console.error('Error:', error);
+                document.getElementById('system-status').textContent = '⚠';
+                addLog('ERROR', error.message, '#f00');
+            }
+        }
+
+        // Render agents
+        function renderAgents() {
+            const container = document.getElementById('agents-list');
+            
+            if (agents.length === 0) {
+                container.innerHTML = '<div style="text-align: center; color: #0aa; padding: 40px;">No agents detected</div>';
+                return;
+            }
+            
+            container.innerHTML = agents.map(agent => `
+                <div class="agent-item" style="border-color: ${agent.color};">
+                    <div class="agent-header">
+                        <div class="agent-emoji" style="color: ${agent.color};">${agent.emoji}</div>
+                        <div>
+                            <div class="agent-name" style="color: ${agent.color};">${agent.label}</div>
+                            <div style="font-size: 0.7rem; color: #0aa;">${agent.sessionKey}</div>
+                        </div>
+                        <div class="agent-status" style="background: ${agent.color}; box-shadow: 0 0 10px ${agent.color};"></div>
+                    </div>
+                    <div class="agent-stats">
+                        <div class="agent-stat">
+                            <span class="agent-stat-label">MODEL</span>
+                            <span class="agent-stat-value">${agent.model.split('-').pop()}</span>
+                        </div>
+                        <div class="agent-stat">
+                            <span class="agent-stat-label">STATUS</span>
+                            <span class="agent-stat-value">${agent.status.toUpperCase()}</span>
+                        </div>
+                        <div class="agent-stat">
+                            <span class="agent-stat-label">TOKENS</span>
+                            <span class="agent-stat-value">${formatNumber(agent.tokens || 0)}</span>
+                        </div>
+                        <div class="agent-stat">
+                            <span class="agent-stat-label">COST</span>
+                            <span class="agent-stat-value" style="color: #ff0;">$${(agent.cost || 0).toFixed(3)}</span>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Add log entry
+        function addLog(agent, content, color = '#0ff') {
+            const container = document.getElementById('logs-stream');
+            const time = new Date().toLocaleTimeString();
+            
+            const entry = document.createElement('div');
+            entry.className = 'log-entry';
+            entry.style.borderColor = color;
+            entry.innerHTML = `
+                <span class="log-time">[${time}]</span>
+                <span class="log-agent">${agent}</span>
+                <span class="log-content">${content}</span>
+            `;
+            
+            container.appendChild(entry);
+            container.scrollTop = container.scrollHeight;
+            
+            // Keep only last 50 logs
+            while (container.children.length > 50) {
+                container.removeChild(container.firstChild);
+            }
+        }
+
+        // Format numbers
+        function formatNumber(num) {
+            if (num >= 1000000) return (num / 1000000).toFixed(1) + 'M';
+            if (num >= 1000) return (num / 1000).toFixed(1) + 'K';
+            return num.toString();
+        }
+
+        // Fetch recent activity
+        async function fetchActivity() {
+            try {
+                const response = await fetch('/api/recent-activity?limit=20');
+                const data = await response.json();
+                
+                if (data.activity && data.activity.length > 0) {
+                    // Clear and repopulate with latest activity
+                    const container = document.getElementById('logs-stream');
+                    container.innerHTML = data.activity.map(act => {
+                        const time = new Date(act.timestamp).toLocaleTimeString();
+                        const roleIcon = act.role === 'user' ? '→' : act.role === 'assistant' ? '←' : '•';
+                        return `
+                            <div class="log-entry" style="border-color: ${act.color};">
+                                <span class="log-time">[${time}]</span>
+                                <span class="log-agent">${act.agent}</span>
+                                <span style="color: #0aa;">${roleIcon}</span>
+                                <span class="log-content">${escapeHtml(act.content)}</span>
+                            </div>
+                        `;
+                    }).join('');
+                    container.scrollTop = container.scrollHeight;
+                }
+            } catch (error) {
+                console.error('Error fetching activity:', error);
+            }
+        }
+        
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // Initialize
+        initCharts();
+        fetchAgents();
+        fetchActivity();
+        
+        // Auto-refresh
+        setInterval(fetchAgents, 3000);
+        setInterval(fetchActivity, 5000);
+    </script>
+</body>
+</html>
