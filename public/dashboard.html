@@ -1,0 +1,622 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OpenClaw Dashboard</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+            color: #fff;
+            min-height: 100vh;
+            padding: 2rem;
+        }
+        :focus-visible {
+            outline: 3px solid #fbbf24;
+            outline-offset: 3px;
+        }
+        .skip-link {
+            position: absolute;
+            left: 0.75rem;
+            top: 0.75rem;
+            padding: 0.75rem 1rem;
+            background: #0b1220;
+            border: 2px solid #fbbf24;
+            color: #fff;
+            border-radius: 0.5rem;
+            transform: translateY(-200%);
+            transition: transform 0.15s ease;
+            z-index: 2000;
+            text-decoration: none;
+            font-weight: 600;
+        }
+        .skip-link:focus {
+            transform: translateY(0);
+        }
+        .container { max-width: 1400px; margin: 0 auto; }
+        h1 { font-size: 2.5rem; margin-bottom: 2rem; }
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+        .stat-card {
+            background: rgba(30, 41, 59, 0.5);
+            border: 1px solid #334155;
+            border-radius: 0.5rem;
+            padding: 1.5rem;
+        }
+        .stat-label { color: #94a3b8; font-size: 0.875rem; margin-bottom: 0.5rem; }
+        .stat-value { font-size: 2rem; font-weight: bold; color: #10b981; }
+        .agents-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 1rem;
+        }
+        .agent-card {
+            background: rgba(30, 41, 59, 0.8);
+            border: 2px solid #334155;
+            border-radius: 1rem;
+            padding: 1.5rem;
+            transition: all 0.3s;
+            backdrop-filter: blur(10px);
+        }
+        .agent-card:hover { 
+            transform: translateY(-4px);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+        }
+        .agent-card:focus-within {
+            box-shadow: 0 0 0 3px rgba(251, 191, 36, 0.5), 0 20px 40px rgba(0, 0, 0, 0.3);
+        }
+        .agent-header {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            margin-bottom: 1rem;
+        }
+        .status-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #10b981;
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        .agent-name { font-size: 1.25rem; font-weight: 600; }
+        .agent-key { font-size: 0.75rem; color: #64748b; font-family: monospace; }
+        .agent-info { display: flex; flex-direction: column; gap: 0.5rem; font-size: 0.875rem; }
+        .info-row { display: flex; justify-content: space-between; }
+        .info-label { color: #94a3b8; }
+        .info-value { color: #fff; font-family: monospace; }
+        .actions {
+            display: flex;
+            gap: 0.5rem;
+            margin-top: 1rem;
+            padding-top: 1rem;
+            border-top: 1px solid #334155;
+        }
+        .btn {
+            flex: 1;
+            padding: 0.5rem;
+            border: none;
+            border-radius: 0.375rem;
+            font-size: 0.875rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .btn:hover { transform: scale(1.05); }
+        .btn:focus-visible { transform: none; }
+        .btn-logs { background: #3b82f6; color: #fff; }
+        .btn-steer { background: #8b5cf6; color: #fff; }
+        .btn-kill { background: #ef4444; color: #fff; }
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(4px);
+            z-index: 1000;
+            padding: 2rem;
+            overflow-y: auto;
+        }
+        .modal.active { display: flex; align-items: center; justify-content: center; }
+        .modal.active:focus { outline: none; }
+        .modal-content {
+            background: #1e293b;
+            border: 1px solid #334155;
+            border-radius: 1rem;
+            padding: 2rem;
+            max-width: 800px;
+            width: 100%;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+        .modal-title { font-size: 1.5rem; font-weight: 600; }
+        .modal-close {
+            background: #334155;
+            border: none;
+            color: #fff;
+            font-size: 1.5rem;
+            width: 32px;
+            height: 32px;
+            border-radius: 0.5rem;
+            cursor: pointer;
+            line-height: 1;
+        }
+        .modal-close:hover { background: #475569; }
+        .log-entry {
+            background: rgba(0, 0, 0, 0.3);
+            border-left: 3px solid #3b82f6;
+            border-radius: 0.375rem;
+            padding: 1rem;
+            margin-bottom: 1rem;
+        }
+        .log-role {
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            color: #94a3b8;
+            margin-bottom: 0.5rem;
+        }
+        .log-content {
+            color: #e2e8f0;
+            white-space: pre-wrap;
+            line-height: 1.5;
+        }
+        input, textarea {
+            width: 100%;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid #334155;
+            color: #fff;
+            padding: 0.75rem;
+            border-radius: 0.5rem;
+            font-family: inherit;
+            font-size: 1rem;
+        }
+        input:focus, textarea:focus {
+            outline: none;
+            border-color: #10b981;
+        }
+        select:focus {
+            outline: none;
+            border-color: #10b981;
+        }
+        .form-group {
+            margin-bottom: 1rem;
+        }
+        .form-label {
+            display: block;
+            color: #94a3b8;
+            font-size: 0.875rem;
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+        }
+        .loading {
+            text-align: center;
+            padding: 4rem;
+            font-size: 1.25rem;
+            color: #94a3b8;
+        }
+        .spinner {
+            border: 3px solid #334155;
+            border-top-color: #10b981;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 1rem;
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <a class="skip-link" href="#main">Saltar al contenido principal</a>
+
+    <div class="container">
+        <header>
+            <h1>OpenClaw Dashboard</h1>
+        </header>
+        
+        <main id="main" tabindex="-1" aria-label="Contenido principal">
+
+        <section class="stats" aria-label="Estadísticas">
+            <div class="stat-card">
+                <div class="stat-label">Total Agents</div>
+                <div class="stat-value" id="total-agents">-</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Active</div>
+                <div class="stat-value" id="active-agents">-</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Total Tokens</div>
+                <div class="stat-value" style="color: #3b82f6;" id="status">⏳ Loading</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Total Cost</div>
+                <div class="stat-value" style="color: #fbbf24; font-size: 1.5rem;" id="last-update">-</div>
+            </div>
+        </section>
+
+        <section aria-label="Agentes" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+            <h2 style="font-size: 1.5rem;">Active Agents</h2>
+            <button onclick="openSpawnModal()" style="background: #10b981; color: #fff; border: none; padding: 0.75rem 1.5rem; border-radius: 0.5rem; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 0.5rem;">
+                <span aria-hidden="true" style="font-size: 1.25rem;">➕</span> Spawn Agent
+            </button>
+        </section>
+        
+        <div id="agents-container" role="region" aria-label="Lista de agentes">
+            <div class="loading">
+                <div class="spinner"></div>
+                Loading agents...
+            </div>
+        </div>
+        </main>
+    </div>
+
+    <!-- Modals -->
+    <div id="logs-modal" class="modal" role="dialog" aria-modal="true" aria-labelledby="logs-title">
+        <div class="modal-content" role="document">
+            <div class="modal-header">
+                <h3 class="modal-title" id="logs-title">Agent Logs</h3>
+                <button class="modal-close" onclick="closeModal('logs-modal')" aria-label="Cerrar">×</button>
+            </div>
+            <div id="logs-content">Loading...</div>
+        </div>
+    </div>
+
+    <div id="steer-modal" class="modal" role="dialog" aria-modal="true" aria-labelledby="steer-title">
+        <div class="modal-content" role="document">
+            <div class="modal-header">
+                <h3 class="modal-title" id="steer-title">Steer Agent</h3>
+                <button class="modal-close" onclick="closeModal('steer-modal')" aria-label="Cerrar">×</button>
+            </div>
+            <div class="form-group">
+                <label class="form-label" for="steer-message">Message</label>
+                <textarea id="steer-message" rows="5" placeholder="Enter message for agent..."></textarea>
+            </div>
+            <button onclick="sendSteer()" class="btn" style="width: 100%; background: #8b5cf6;">
+                Send Message
+            </button>
+        </div>
+    </div>
+
+    <div id="spawn-modal" class="modal" role="dialog" aria-modal="true" aria-labelledby="spawn-title">
+        <div class="modal-content" role="document">
+            <div class="modal-header">
+                <h3 class="modal-title" id="spawn-title">Spawn New Agent</h3>
+                <button class="modal-close" onclick="closeModal('spawn-modal')" aria-label="Cerrar">×</button>
+            </div>
+            <div class="form-group">
+                <label class="form-label" for="spawn-task">Task (required)</label>
+                <textarea id="spawn-task" rows="4" placeholder="What should this agent do?"></textarea>
+            </div>
+            <div class="form-group">
+                <label class="form-label" for="spawn-agent-id">Agent ID (optional)</label>
+                <input type="text" id="spawn-agent-id" placeholder="Leave empty for default">
+            </div>
+            <div class="form-group">
+                <label class="form-label" for="spawn-label">Label (optional)</label>
+                <input type="text" id="spawn-label" placeholder="Friendly name">
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+                <div class="form-group" style="margin-bottom: 0;">
+                    <label class="form-label" for="spawn-runtime">Runtime</label>
+                    <select id="spawn-runtime" style="width: 100%; padding: 0.75rem; background: rgba(0,0,0,0.3); border: 1px solid #334155; color: #fff; border-radius: 0.5rem;">
+                        <option value="subagent">Subagent</option>
+                        <option value="acp">ACP</option>
+                    </select>
+                </div>
+                <div class="form-group" style="margin-bottom: 0;">
+                    <label class="form-label" for="spawn-model">Model (optional)</label>
+                    <input type="text" id="spawn-model" placeholder="Default model">
+                </div>
+            </div>
+            <button onclick="spawnAgent()" class="btn" style="width: 100%; background: #10b981;">
+                <span aria-hidden="true">🚀</span> Spawn Agent
+            </button>
+        </div>
+    </div>
+
+    <script>
+        async function fetchAgents() {
+            try {
+                const response = await fetch('/api/agents');
+                const data = await response.json();
+                
+                const agents = data.agents || [];
+                const activeCount = agents.filter(a => a.status === 'active').length;
+                const totalTokens = agents.reduce((sum, a) => sum + (a.tokens || 0), 0);
+                const totalCost = agents.reduce((sum, a) => sum + (a.cost || 0), 0);
+                
+                // Update stats
+                document.getElementById('total-agents').textContent = agents.length;
+                document.getElementById('active-agents').textContent = activeCount;
+                document.getElementById('status').textContent = formatNumber(totalTokens) + ' tokens';
+                document.getElementById('last-update').textContent = '$' + totalCost.toFixed(2);
+                
+                // Render agents
+                const container = document.getElementById('agents-container');
+                if (agents.length === 0) {
+                    container.innerHTML = '<div class="loading">No agents found</div>';
+                } else {
+                    container.innerHTML = '<div class="agents-grid" role="list">' + agents.map(agent => `
+                        <div class="agent-card" role="listitem" style="border-color: ${agent.color}40;">
+                            <div class="agent-header">
+                                <div style="font-size: 2.5rem; line-height: 1;">${agent.emoji || '🤖'}</div>
+                                <div style="flex: 1;">
+                                    <div class="agent-name" style="color: ${agent.color};">${agent.label}</div>
+                                    <div class="agent-key">${agent.sessionKey}</div>
+                                </div>
+                                <div class="status-dot" style="background: ${agent.color};" aria-hidden="true"></div>
+                            </div>
+                            <div class="agent-info">
+                                <div class="info-row">
+                                    <span class="info-label">Model:</span>
+                                    <span class="info-value">${agent.model}</span>
+                                </div>
+                                <div class="info-row">
+                                    <span class="info-label">Status:</span>
+                                    <span class="info-value" style="color: ${agent.color};">${agent.status}</span>
+                                </div>
+                                <div class="info-row">
+                                    <span class="info-label">Tokens:</span>
+                                    <span class="info-value">${formatNumber(agent.tokens || 0)}</span>
+                                </div>
+                                <div class="info-row">
+                                    <span class="info-label">Cost:</span>
+                                    <span class="info-value" style="color: #fbbf24;">$${(agent.cost || 0).toFixed(4)}</span>
+                                </div>
+                            </div>
+                            <div class="actions">
+                                <button class="btn btn-logs" onclick="viewLogs('${agent.sessionKey}', '${agent.label}')" aria-label="Ver logs de ${agent.label}">
+                                    📝 Logs
+                                </button>
+                                <button class="btn btn-steer" onclick="openSteerModal('${agent.sessionKey}', '${agent.label}')" aria-label="Enviar instrucción a ${agent.label}">
+                                    🎯 Steer
+                                </button>
+                                <button class="btn btn-kill" onclick="killAgent('${agent.sessionKey}', '${agent.label}')" aria-label="Terminar ${agent.label}">
+                                    ⛔ Kill
+                                </button>
+                            </div>
+                        </div>
+                    `).join('') + '</div>';
+                }
+            } catch (error) {
+                console.error('Error fetching agents:', error);
+                document.getElementById('agents-container').innerHTML = 
+                    '<div class="loading" style="color: #ef4444;">Error: ' + error.message + '</div>';
+            }
+        }
+
+        // Initial fetch
+        fetchAgents();
+        
+        // Auto-refresh every 3 seconds
+        setInterval(fetchAgents, 3000);
+
+        // Modal functions
+        let lastFocusedElement = null;
+
+        function getFocusableElements(container) {
+            return Array.from(container.querySelectorAll(
+                'a[href], button:not([disabled]), textarea, input, select, [tabindex]:not([tabindex="-1"])'
+            ));
+        }
+
+        function trapFocus(modal, e) {
+            if (e.key !== 'Tab') return;
+            const focusables = getFocusableElements(modal);
+            if (focusables.length === 0) return;
+
+            const first = focusables[0];
+            const last = focusables[focusables.length - 1];
+
+            if (e.shiftKey && document.activeElement === first) {
+                e.preventDefault();
+                last.focus();
+            } else if (!e.shiftKey && document.activeElement === last) {
+                e.preventDefault();
+                first.focus();
+            }
+        }
+
+        function openModal(id) {
+            const modal = document.getElementById(id);
+            lastFocusedElement = document.activeElement;
+            modal.classList.add('active');
+
+            // Focus first focusable element inside the modal
+            const focusables = getFocusableElements(modal);
+            (focusables[0] || modal).focus();
+
+            // Trap focus
+            modal.addEventListener('keydown', (e) => trapFocus(modal, e));
+        }
+
+        function closeModal(id) {
+            const modal = document.getElementById(id);
+            modal.classList.remove('active');
+            if (lastFocusedElement && typeof lastFocusedElement.focus === 'function') {
+                lastFocusedElement.focus();
+            }
+        }
+
+        function openSpawnModal() {
+            openModal('spawn-modal');
+        }
+
+        // View Logs
+        async function viewLogs(sessionKey, label) {
+            const modal = document.getElementById('logs-modal');
+            const content = document.getElementById('logs-content');
+            const title = document.getElementById('logs-title');
+            
+            title.textContent = `📝 ${label} - Logs`;
+            content.innerHTML = '<div class="loading"><div class="spinner"></div>Loading logs...</div>';
+            openModal('logs-modal');
+
+            try {
+                const response = await fetch('/api/agents/logs?sessionKey=' + encodeURIComponent(sessionKey));
+                const data = await response.json();
+                
+                if (data.messages && data.messages.length > 0) {
+                    content.innerHTML = data.messages.map(msg => `
+                        <div class="log-entry" style="border-left-color: ${msg.role === 'user' ? '#3b82f6' : msg.role === 'assistant' ? '#10b981' : '#94a3b8'};">
+                            <div class="log-role">${msg.role}</div>
+                            <div class="log-content">${escapeHtml(msg.content || JSON.stringify(msg))}</div>
+                        </div>
+                    `).join('');
+                } else {
+                    content.innerHTML = '<p style="text-align: center; color: #94a3b8;">No logs available</p>';
+                }
+            } catch (error) {
+                content.innerHTML = '<p style="color: #ef4444;">Error loading logs: ' + error.message + '</p>';
+            }
+        }
+
+        // Steer Agent
+        let currentSteerSession = null;
+        let currentSteerLabel = null;
+
+        function openSteerModal(sessionKey, label) {
+            currentSteerSession = sessionKey;
+            currentSteerLabel = label;
+            document.getElementById('steer-title').textContent = `🎯 Steer ${label}`;
+            document.getElementById('steer-message').value = '';
+            openModal('steer-modal');
+        }
+
+        async function sendSteer() {
+            const message = document.getElementById('steer-message').value.trim();
+            if (!message) {
+                alert('Please enter a message');
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/agents/steer', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        sessionKey: currentSteerSession,
+                        message: message
+                    })
+                });
+
+                if (response.ok) {
+                    alert(`Message sent to ${currentSteerLabel}!`);
+                    closeModal('steer-modal');
+                } else {
+                    throw new Error('Failed to send message');
+                }
+            } catch (error) {
+                alert('Error: ' + error.message);
+            }
+        }
+
+        // Kill Agent
+        async function killAgent(sessionKey, label) {
+            if (!confirm(`Are you sure you want to kill ${label}?`)) {
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/agents/kill', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ sessionKey })
+                });
+
+                if (response.ok) {
+                    alert(`${label} has been terminated`);
+                    fetchAgents();
+                } else {
+                    throw new Error('Failed to kill agent');
+                }
+            } catch (error) {
+                alert('Error: ' + error.message);
+            }
+        }
+
+        // Spawn Agent
+        async function spawnAgent() {
+            const task = document.getElementById('spawn-task').value.trim();
+            if (!task) {
+                alert('Task is required');
+                return;
+            }
+
+            const payload = {
+                task: task,
+                agentId: document.getElementById('spawn-agent-id').value.trim() || undefined,
+                label: document.getElementById('spawn-label').value.trim() || undefined,
+                runtime: document.getElementById('spawn-runtime').value,
+                model: document.getElementById('spawn-model').value.trim() || undefined
+            };
+
+            try {
+                const response = await fetch('/api/agents/spawn', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                if (response.ok) {
+                    alert('Agent spawned successfully!');
+                    closeModal('spawn-modal');
+                    fetchAgents();
+                } else {
+                    const error = await response.json();
+                    throw new Error(error.error || 'Failed to spawn agent');
+                }
+            } catch (error) {
+                alert('Error: ' + error.message);
+            }
+        }
+
+        // Utility
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        function formatNumber(num) {
+            if (num >= 1000000) return (num / 1000000).toFixed(1) + 'M';
+            if (num >= 1000) return (num / 1000).toFixed(1) + 'K';
+            return num.toString();
+        }
+
+        // Close modals on Escape key
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                document.querySelectorAll('.modal').forEach(m => m.classList.remove('active'));
+            }
+        });
+    </script>
+</body>
+</html>
